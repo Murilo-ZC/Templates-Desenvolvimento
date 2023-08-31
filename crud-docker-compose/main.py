@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String
@@ -46,5 +46,25 @@ def get_users():
     return {"data":users}
 
 
+@app.post("/create_user")
+def create_user(data: dict = Body()):
+    usuario = User(name = data['name'], email = data['email'], password = data['password'])
+    session.add(usuario)
+    session.commit()
+    return {"data": "Usuário criado com sucesso!"}
 
+@app.put("/update_user")
+def update_user(data: dict = Body()):
+    usuario = session.query(User).filter(User.id == data['id']).first()
+    usuario.name = data['name']
+    usuario.email = data['email']
+    usuario.password = data['password']
+    session.commit()
+    return {"data": "Usuário atualizado com sucesso!"}
 
+@app.delete("/delete_user")
+def delete_user(data: dict = Body()):
+    usuario = session.query(User).filter(User.id == data['id']).first()
+    session.delete(usuario)
+    session.commit()
+    return {"data": "Usuário deletado com sucesso!"}

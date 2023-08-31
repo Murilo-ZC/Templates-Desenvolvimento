@@ -230,6 +230,67 @@ Ao utilizarmos o Thunder Client para verificar essa rota, é possível ver que u
 
 <img src="./media/retorno_get_users_vazio.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
 
+Agora vamos criar a rota para adicionar um usuário ao banco
+
+```python
+from fastapi import FastAPI, Body
+
+# Restante do código anterior
+
+@app.post("/create_user")
+def create_user(data: dict = Body()):
+    usuario = User(name = data['name'], email = data['email'], password = data['password'])
+    session.add(usuario)
+    session.commit()
+    return {"data": "Usuário criado com sucesso!"}
+
+```
+
+Após executar a rota, é possível ver que o usuário foi criado com sucesso:
+
+<img src="./media/salvando_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+
+Ao testarmos a rota para verificar a lista de usuários, é possível ver que o usuário foi adicionado com sucesso:
+
+<img src="./media/retorno_get_users_1.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+
+Agora vamos criar a rota para atualizar um usuário no banco
+
+```python
+# Restante do código anterior
+
+@app.put("/update_user")
+def update_user(data: dict = Body()):
+    usuario = session.query(User).filter(User.id == data['id']).first()
+    usuario.name = data['name']
+    usuario.email = data['email']
+    usuario.password = data['password']
+    session.commit()
+    return {"data": "Usuário atualizado com sucesso!"}
+```
+
+O retorno da API será:
+
+<img src="./media/atualizar_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+
+Agora, vamos criar uma nova rota para deletar um usuário
+
+```python
+# Código anterior
+@app.delete("/delete_user")
+def delete_user(data: dict = Body()):
+    usuario = session.query(User).filter(User.id == data['id']).first()
+    session.delete(usuario)
+    session.commit()
+    return {"data": "Usuário deletado com sucesso!"}
+```
+
+O resultado da chamada pode ser observado em:
+
+<img src="./media/deletar_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+
+
+
 
 ## Docker
 
