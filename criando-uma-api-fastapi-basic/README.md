@@ -5,7 +5,7 @@ Ela será uma API básica, com o objetivo de apresentar como criar uma API com F
 
 ## Requisitos
 
-- Python 3.8
+- Python >= 3.8
 - FastAPI
 - Uvicorn
 - Docker
@@ -155,6 +155,71 @@ async def dividir(numero1: int, numero2: int):
         return {"resultado": "Não é possível dividir por zero."}
 ```
 
-Para testar a aplicação, vamos utilizar o plugin Thunder Client, do VSCode. Para instalar, basta acessar o menu de extensões do VSCode, e pesquisar por ***Thunder Client***. A saída esperada é a seguinte:
+Para testar a aplicação, vamos utilizar o plugin Thunder Client, do VSCode. Para instalar, basta acessar o menu de extensões do VSCode, e pesquisar por ***[Thunder Client](https://www.thunderclient.com/)***. A saída esperada é a seguinte:
+
+<img src="./media/saida_somar_thunder.png" alt="Saída da chamada de API" style="height: 100%; width:100%; flex:1"/>
+
+## Docker
+
+Agora vamos construir uma imagem para nossa aplicação. Essa imagem deve conter todas as dependências necessárias para a execução da aplicação. Para isso, vamos criar um arquivo ***Dockerfile***, com o seguinte conteúdo:
+
+```dockerfile
+FROM python:3.11-alpine3.17
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+
+RUN pip install -r requirements.txt
+
+COPY . .
+
+EXPOSE 80
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+``` 
+
+Sobre o conteúdo do ***Dockerfile***, podemos destacar o seguinte:
+- A imagem base é a imagem ***python:3.11-alpine3.17***
+- O diretório de trabalho é o diretório ***app***
+- O arquivo ***requirements.txt*** é copiado para o diretório de trabalho
+- As dependências são instaladas
+- O conteúdo do diretório atual é copiado para o diretório de trabalho, ignorando os arquivos que estão no arquivo ***.dockerignore***
+- A porta 80 é exposta. ***IMPORTANTE:*** Apenas a porta exposta no Dockerfile é exposta no container. Para expor outras portas, é necessário utilizar o parâmetro ***-p*** na execução do container
+- O comando para executar a aplicação é definido
 
 
+> ***IMPORTANTE:*** O arquivo ***.dockerignore*** deve ser criado, para que o Docker ignore os arquivos que não devem ser copiados para a imagem. O conteúdo do arquivo deve ser o seguinte:
+
+```dockerfile
+.git
+__pycache__
+*.pyc
+Include
+Lib
+Scripts
+pyvenv.cfg
+```
+
+Agora vamos construir a imagem. Para isso, execute o comando abaixo:
+
+```bash
+docker build -t criando-uma-api-fastapi-basic .
+```
+
+Depois de criada a imagem, vamos construir o container. Para isso, execute o comando abaixo:
+
+```bash
+docker run -d -p 8000:80 --name minha-api criando-uma-api-fastapi-basic
+```
+
+O que estamos fazendo aqui é o seguinte:
+- Criando um container com o nome ***minha-api***
+- Expondo a porta 80 do container para a porta 8000 do host
+- Executando o container em modo daemon
+
+Para parar a execução da aplicação, execute o comando abaixo:
+
+```bash
+docker stop minha-api
+```
