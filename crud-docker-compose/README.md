@@ -277,6 +277,7 @@ Agora, vamos criar uma nova rota para deletar um usuário
 
 ```python
 # Código anterior
+
 @app.delete("/delete_user")
 def delete_user(data: dict = Body()):
     usuario = session.query(User).filter(User.id == data['id']).first()
@@ -289,8 +290,16 @@ O resultado da chamada pode ser observado em:
 
 <img src="./media/deletar_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
 
+Agora, vamos criar uma rota para buscar um usuário pelo seu id
 
+```python
+# Restante do códifo anterior
 
+@app.get("/get_user/{id}")
+def get_user(id: int):
+    user = session.query(User).filter(User.id == id).first()
+    return {"data":user}
+```
 
 ## Docker
 

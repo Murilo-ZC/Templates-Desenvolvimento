@@ -45,6 +45,10 @@ def get_users():
     users = session.query(User).all()
     return {"data":users}
 
+@app.get("/get_user/{id}")
+def get_user(id: int):
+    user = session.query(User).filter(User.id == id).first()
+    return {"data":user}
 
 @app.post("/create_user")
 def create_user(data: dict = Body()):
