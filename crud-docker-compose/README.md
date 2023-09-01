@@ -10,7 +10,7 @@ Durante a construção desta API, o processo será implementado utilizando uma a
 - Uvicorn
 - Docker
 - SQLAlchemy >= 2.0
-- psycopg2
+- psycopg2-binary
 
 ## Recomendação de Leitura
 
@@ -248,11 +248,11 @@ def create_user(data: dict = Body()):
 
 Após executar a rota, é possível ver que o usuário foi criado com sucesso:
 
-<img src="./media/salvando_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/salvando_usuario.png" alt="Retorno da rota de salvar os usuários" style="height: 100%; width:100%; flex:1"/>
 
 Ao testarmos a rota para verificar a lista de usuários, é possível ver que o usuário foi adicionado com sucesso:
 
-<img src="./media/retorno_get_users_1.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/retorno_get_users_1.png" alt="Retorno da rota de pegar todos os usuários com apenas um retorno" style="height: 100%; width:100%; flex:1"/>
 
 Agora vamos criar a rota para atualizar um usuário no banco
 
@@ -271,7 +271,7 @@ def update_user(data: dict = Body()):
 
 O retorno da API será:
 
-<img src="./media/atualizar_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/atualizar_usuario.png" alt="Retorno da rota de atualizar os usuários" style="height: 100%; width:100%; flex:1"/>
 
 Agora, vamos criar uma nova rota para deletar um usuário
 
@@ -288,7 +288,7 @@ def delete_user(data: dict = Body()):
 
 O resultado da chamada pode ser observado em:
 
-<img src="./media/deletar_usuario.png" alt="Retorno da rota de todos os usuários ainda vazia" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/deletar_usuario.png" alt="Retorno da rota de deletar os usuários" style="height: 100%; width:100%; flex:1"/>
 
 Agora, vamos criar uma rota para buscar um usuário pelo seu id
 
@@ -301,6 +301,435 @@ def get_user(id: int):
     return {"data":user}
 ```
 
+Agora vamos refatorar a aplicação. Todo o nosso código está escrito no arquivo ***main.py***. Hoje a estrutura do nosso projeto é a seguinte:
+
+<img src="./media/estrutura_base.png" alt="Estrutura de pastas antes da refatoração" style="height: 100%; width:100%; flex:1"/>
+
+Vamos criar uma pasta chamada ***app***, e dentro dela vamos criar um arquivo chamado ***main.py***. Dentro da pasta ***app***, vamos criar uma pasta chamada ***models***, e dentro dela vamos criar um arquivo chamado ***user.py***. Nossa estrutura de pastas será a seguinte:
+
+<img src="./media/estrutura_refatorada.png" alt="Estrutura de pastas após a refatoração" style="height: 100%; width:100%; flex:1"/>
+
+Agora precisamos ajustar o conteúdo dos arquivos para que a aplicação continue funcionando. O arquivo ***main.py*** vai ficar com o seguinte conteúdo:
+
+```python
+from fastapi import FastAPI, Body
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.models.users import Base, User
+
+# Constantes
+DB_USER = "admin"
+DB_PASSWORD = "postgres"
+DB_HOST = "127.0.0.1"
+DB_PORT = "5432"
+DB_NAME = "banco-app"
+
+# Cria a engine de dados para o postgres
+engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
+# Cria uma seção no banco
+session = Session(engine)
+
+# Cria a tabela no banco se ela já não existir
+Base.metadata.create_all(engine, checkfirst=True)
+
+app = FastAPI()
+
+@app.get("/get_users")
+def get_users():
+    users = session.query(User).all()
+    return {"data":users}
+
+@app.get("/get_user/{id}")
+def get_user(id: int):
+    user = session.query(User).filter(User.id == id).first()
+    return {"data":user}
+
+@app.post("/create_user")
+def create_user(data: dict = Body()):
+    usuario = User(name = data['name'], email = data['email'], password = data['password'])
+    session.add(usuario)
+    session.commit()
+    return {"data": "Usuário criado com sucesso!"}
+
+@app.put("/update_user")
+def update_user(data: dict = Body()):
+    usuario = session.query(User).filter(User.id == data['id']).first()
+    usuario.name = data['name']
+    usuario.email = data['email']
+    usuario.password = data['password']
+    session.commit()
+    return {"data": "Usuário atualizado com sucesso!"}
+
+@app.delete("/delete_user")
+def delete_user(data: dict = Body()):
+    usuario = session.query(User).filter(User.id == data['id']).first()
+    session.delete(usuario)
+    session.commit()
+    return {"data": "Usuário deletado com sucesso!"}
+
+```
+
+E quanto a pasta ***models***, o arquivo ***user.py*** vai ficar com o seguinte conteúdo:
+
+```python
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String
+
+# Cria a base para os modelos
+Base = declarative_base()
+
+#Define a tabela base
+class User(Base):
+    """
+    Classe que representa a tabela de Usuários do sistema
+    """
+    __tablename__ = "Users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    password = Column(String(255), nullable=False)
+
+    def __repr__(self):
+        return f"<User(id={self.id}, name={self.name}, email={self.email}, password={self.password})>"
+```
+
+Agora para executar a aplicação, vamos utilizar o comando abaixo:
+
+```bash
+uvicorn app.main:app
+```
+
 ## Docker
+
+Agora vamos construir nosso ***Dockerfile*** . Para isso, vamos criar um arquivo chamado ***Dockerfile***, com o seguinte conteúdo:
+
+```dockerfile
+FROM python:3.11-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+
+RUN python3 -m pip install -r requirements.txt --no-cache-dir 
+
+COPY . .
+
+EXPOSE 80
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+```
+
+> ***IMPORTANTE:*** Nesse ponto, nossa imagem da aplicação vai se conectar a outro container, que é o container do banco de dados. Para isso, precisamos criar uma rede para que os containers possam se comunicar. Em modo padrão, os containers estão rodando na mesma rede, mas para identificar qual o endereço de rede do container rodando o banco de dados, vamos utilizar o comando:
+
+```bash
+docker ps
+```	
+
+A saída esperada é a seguinte:
+
+```bash
+CONTAINER ID   IMAGE      COMMAND                  CREATED       STATUS       PORTS                    NAMES
+9c32cd2be4e4   postgres   "docker-entrypoint.s…"   6 hours ago   Up 6 hours   0.0.0.0:5432->5432/tcp   banco-container
+```
+
+Vamos utilizar esse ID do container para identificar seu endereco de rede. Para isso, execute o comando abaixo:
+
+```bash
+docker inspect 9c32cd2be4e4
+```
+
+Vamos ter uma saída como:
+
+```json
+[
+    {
+        "Id": "9c32cd2be4e4b1102d089574eaa4ae1e7e15db217dde02ae2a93d2f0d0ae2c4b",
+        "Created": "2023-08-31T19:35:59.268438105Z",
+        "Path": "docker-entrypoint.sh",
+        "Args": [
+            "postgres"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 22848,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2023-08-31T19:35:59.828428007Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:43677b39c446545c6ce30dd8e32d8c0c0acd7c00eac768a834e10018f5e38c32",
+        "ResolvConfPath": "/var/lib/docker/containers/9c32cd2be4e4b1102d089574eaa4ae1e7e15db217dde02ae2a93d2f0d0ae2c4b/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/9c32cd2be4e4b1102d089574eaa4ae1e7e15db217dde02ae2a93d2f0d0ae2c4b/hostname",
+        "HostsPath": "/var/lib/docker/containers/9c32cd2be4e4b1102d089574eaa4ae1e7e15db217dde02ae2a93d2f0d0ae2c4b/hosts",
+        "LogPath": "/var/lib/docker/containers/9c32cd2be4e4b1102d089574eaa4ae1e7e15db217dde02ae2a93d2f0d0ae2c4b/9c32cd2be4e4b1102d089574eaa4ae1e7e15db217dde02ae2a93d2f0d0ae2c4b-json.log",
+        "Name": "/banco-container",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": [
+            "ad15e7914fac0194c10c7beab4a102f26f0917b5a24eebaf483681ba6abc8e74"
+        ],
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {
+                "5432/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "5432"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                30,
+                120
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "host",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/a1cd3630b1727b3ae0abc55635b1772331f5fed81c7393a60e31a4084a390f56-init/diff:/var/lib/docker/overlay2/1b9ba82f145cd14f2d0857f24214160fcc5693925e7c3b2315d30d9d8283a78d/diff:/var/lib/docker/overlay2/49e9088a14bf587eb08244348de73aff917802a8509b241c82a02c4e539dc8dc/diff:/var/lib/docker/overlay2/16d9c6a33bd35692632a3f6d9c353a3f460661145678817dea5ba59f83bee983/diff:/var/lib/docker/overlay2/68d05d01d9affc865e6a76d7bbe62946cd90283181bbede28bf8e29e3020b08e/diff:/var/lib/docker/overlay2/692f18f8ce86d91a8424509f1b794595b0a76600edbcbed848dbae9b9ef16065/diff:/var/lib/docker/overlay2/03475096d3db1e4976767ba07c9ba791a4d5bd486d73336d5ad90261a568d118/diff:/var/lib/docker/overlay2/8b0805dbb7bd15e4317560baee588d649cc661b2db4e336ac0741df9ae4797ab/diff:/var/lib/docker/overlay2/799ab0fab567f62b3c0abe64edd9243dafc89b0f89de344f261b8492e297301d/diff:/var/lib/docker/overlay2/87e8553a9a8c8534e54dbd1bd9d06faaf8ffeffd67235723409e9d52c721c75a/diff:/var/lib/docker/overlay2/f4281fade07d2efa93b3650edae23c448ce289df60fd087004534dc1b32d0e2f/diff:/var/lib/docker/overlay2/15be3f804e10e31e42aba8ba1333c97a2b30bd8933c1fc86ef2b7dc1f2fed2bc/diff:/var/lib/docker/overlay2/337e577323b4b07645ee70ba784ff7e787c00084bb7d30d04b5719db822e350f/diff:/var/lib/docker/overlay2/3e72a2faa7bae03217d2772f67b1905a554b18a2d707a43174ad4ecdfdb09ff5/diff",
+                "MergedDir": "/var/lib/docker/overlay2/a1cd3630b1727b3ae0abc55635b1772331f5fed81c7393a60e31a4084a390f56/merged",
+                "UpperDir": "/var/lib/docker/overlay2/a1cd3630b1727b3ae0abc55635b1772331f5fed81c7393a60e31a4084a390f56/diff",
+                "WorkDir": "/var/lib/docker/overlay2/a1cd3630b1727b3ae0abc55635b1772331f5fed81c7393a60e31a4084a390f56/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "93ceb1c6441195c29621cf744728e0596f363f75cd5c5896a49729193896a414",
+                "Source": "/var/lib/docker/volumes/93ceb1c6441195c29621cf744728e0596f363f75cd5c5896a49729193896a414/_data",
+                "Destination": "/var/lib/postgresql/data",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+        "Config": {
+            "Hostname": "9c32cd2be4e4",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "5432/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "POSTGRES_USER=admin",
+                "POSTGRES_DB=banco-app",
+                "POSTGRES_PASSWORD=postgres",
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/15/bin",
+                "GOSU_VERSION=1.16",
+                "LANG=en_US.utf8",
+                "PG_MAJOR=15",
+                "PG_VERSION=15.4-1.pgdg120+1",
+                "PGDATA=/var/lib/postgresql/data"
+            ],
+            "Cmd": [
+                "postgres"
+            ],
+            "Image": "postgres",
+            "Volumes": {
+                "/var/lib/postgresql/data": {}
+            },
+            "WorkingDir": "",
+            "Entrypoint": [
+                "docker-entrypoint.sh"
+            ],
+            "OnBuild": null,
+            "Labels": {},
+            "StopSignal": "SIGINT"
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "9a5d4c34e4e0e416e9440070b98e7e0e3af8a2603c51ddc5e4b1e14b238e00e7",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {
+                "5432/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "5432"
+                    }
+                ]
+            },
+            "SandboxKey": "/var/run/docker/netns/9a5d4c34e4e0",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "601a3a7e5544de961af982a0f00b3b913dd41dd7fa0a41c8c1c1b301688f1ecb",
+            "Gateway": "172.17.0.1",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "172.17.0.3",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "MacAddress": "02:42:ac:11:00:03",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "183455b57d69984444abb345416b2db40f8c47717fd67471fe6abf8481c440c0",
+                    "EndpointID": "601a3a7e5544de961af982a0f00b3b913dd41dd7fa0a41c8c1c1b301688f1ecb",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.3",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:03",
+                    "DriverOpts": null
+                }
+            }
+        }
+    }
+]
+```
+
+Nesse momento, nos interessa a informação de rede do container, que está listada em:
+
+```json
+"Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "183455b57d69984444abb345416b2db40f8c47717fd67471fe6abf8481c440c0",
+                    "EndpointID": "601a3a7e5544de961af982a0f00b3b913dd41dd7fa0a41c8c1c1b301688f1ecb",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.3",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:03",
+                    "DriverOpts": null
+                }
+            }
+```
+
+O valor do ***IPAddress*** é o que deve ser adicionado como conteudo do nosso ***DB_HOST*** dentro do arquivo ***main.py***. O arquivo ***main.py*** vai ficar com o seguinte conteúdo:
+
+```python
+# Código das importações
+
+# Constantes
+DB_USER = "admin"
+DB_PASSWORD = "postgres"
+DB_HOST = "172.17.0.3"
+DB_PORT = "5432"
+DB_NAME = "banco-app"
+
+# Restante do código da aplicação
+```
+Agora vamos construir a imagem. Para isso, execute o comando abaixo:
+
+```bash
+docker build -t crud-api .
+```
+
+Depois de criada a imagem, vamos construir o container. Para isso, execute o comando abaixo:
+
+```bash
+docker run -d -p 8000:80 --name meu-crud-api crud-api
+```
 
 ## Docker-Compose
