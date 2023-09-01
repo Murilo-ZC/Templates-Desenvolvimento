@@ -303,11 +303,11 @@ def get_user(id: int):
 
 Agora vamos refatorar a aplicação. Todo o nosso código está escrito no arquivo ***main.py***. Hoje a estrutura do nosso projeto é a seguinte:
 
-<img src="./media/estrutura_base.png" alt="Estrutura de pastas antes da refatoração" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/estrutura_base.png" alt="Estrutura de pastas antes da refatoração" style="height: 50%; width:50%; flex:1"/>
 
 Vamos criar uma pasta chamada ***app***, e dentro dela vamos criar um arquivo chamado ***main.py***. Dentro da pasta ***app***, vamos criar uma pasta chamada ***models***, e dentro dela vamos criar um arquivo chamado ***user.py***. Nossa estrutura de pastas será a seguinte:
 
-<img src="./media/estrutura_refatorada.png" alt="Estrutura de pastas após a refatoração" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/estrutura_refatorada.png" alt="Estrutura de pastas após a refatoração" style="height: 50%; width:50%; flex:1"/>
 
 Agora precisamos ajustar o conteúdo dos arquivos para que a aplicação continue funcionando. O arquivo ***main.py*** vai ficar com o seguinte conteúdo:
 
@@ -732,4 +732,88 @@ Depois de criada a imagem, vamos construir o container. Para isso, execute o com
 docker run -d -p 8000:80 --name meu-crud-api crud-api
 ```
 
+> ***Sugestão:*** Para facilitar a mudança dos valores constantes nos programas, utilizar arquivos de configuração. Para isso, podemos utilizar o pacote ***python-dotenv***. 
+
 ## Docker-Compose
+
+Para não ter que lançar um container por vez e não precisar chamar seus serviços pelo seu endereço IP, vamos criar um arquivo chamado ***docker-compose.yml***, com o seguinte conteúdo:
+
+```yaml
+version: '3.9'
+services:
+  api:
+    restart: always
+    ports:
+      - "8000:80"
+    image: crud-api
+    depends_on:
+      - db
+    container_name: compose-api
+  db:
+    image: postgres:13.3-alpine
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=banco-app
+    ports:
+      - "5432:5432"
+    container_name: compose-banco-container
+
+
+```
+
+O que estamos fazendo aqui:
+- Definindo a versão do docker-compose
+- Definindo o serviço de api, que por sua vez:
+    - Define que o container deve ser reiniciado sempre que for parado
+    - Define a porta 8000 da máquina local para a porta 80 do container
+    - Define a imagem que será utilizada para criar o container, no caso a imagem criada chamada ***crud-api***
+    - Define que o container depende do serviço ***db***
+    - Define o nome do container como ***compose-api***
+- Definindo o serviço de banco de dados, que por sua vez:
+    - Define a imagem que será utilizada para criar o container, no caso a imagem ***postgres:13.3-alpine***
+    - Define as variáveis de ambiente que serão utilizadas para criar o banco de dados
+    - Define a porta 5432 da máquina local para a porta 5432 do container
+    - Define o nome do container como ***compose-banco-container***
+
+
+
+
+> ***IMPORTANTE:*** Antes de executar o arquivo **docker-compose**, garanta que as instâncias do **Postgres** e do **crud-api** não estejam rodando. Para isso execute o comando abaixo:
+```bash
+docker stop $(docker ps -a -q)
+```
+
+Outro ponto, como agora estamos trabalhando com um serviço de banco de dados, vamos alterar o endereço do ***DB_HOST*** dentro do arquivo ***main.py***. O arquivo ***main.py*** vai ficar com o seguinte conteúdo:
+
+```python
+# Código das importações
+
+# Constantes
+DB_USER = "admin"
+DB_PASSWORD = "postgres"
+# DB_HOST = "172.17.0.3"
+DB_HOST = "compose-banco-container"
+DB_PORT = "5432"
+DB_NAME = "banco-app"
+
+# Restante do código da aplicação
+```
+
+Agora só precisamos construir nossa imagem novamente e então podemos iniciar nosso arquivo compose com o seguinte comando:
+    
+```bash
+docker-compose up -d
+```
+
+Para parar a aplicação, utilizar o comando:
+
+```bash
+docker-compose stop
+```
+
+Se for necessário reiniciar nossa aplicação, basta utilizarmos o seguinte comando:
+
+```bash
+docker-compose start
+```

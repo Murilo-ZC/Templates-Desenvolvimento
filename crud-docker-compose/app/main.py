@@ -6,7 +6,8 @@ from app.models.users import Base, User
 # Constantes
 DB_USER = "admin"
 DB_PASSWORD = "postgres"
-DB_HOST = "172.17.0.3"
+# DB_HOST = "172.17.0.3"
+DB_HOST = "compose-banco-container"
 DB_PORT = "5432"
 DB_NAME = "banco-app"
 
