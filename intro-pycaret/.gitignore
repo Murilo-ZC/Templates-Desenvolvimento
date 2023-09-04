@@ -2,3 +2,9 @@ Include
 Lib
 Scripts
 pyvenv.cfg
+share
+xgboost
+etc
+images
+Library
+catboost_info

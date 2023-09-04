@@ -1,2 +1,3 @@
-uvicorn
-fastapi
+pycaret[full]
+jupyterlab
+pandas
