@@ -130,7 +130,75 @@ st.header("Visualização de Dados com Streamlit")
 st.subheader("Uma subseção")
 ```
 
+O Steamlit permite que uma estrutura de páginas possa ser criada dentro da aplicação. Desta forma, é possível criar uma organização melhor para a aplicação. Para isso, vamos criar um diretório chamado ***pages*** na raiz do projeto. Dentro dele, vamos adicionar um arquivo chamado ***Removedor_de_Fundo.py***. Este arquivo foi inspirado na publicação do desenvolvedor [Eduardo Mendes (@Dunossauro)](https://www.youtube.com/@Dunossauro), em seu [vídeo](https://www.youtube.com/watch?v=Ie5ef_R_k6I) sobre o Streamlit. O conteúdo do arquivo é o seguinte:
 
+```python
+import streamlit as st
+from PIL import Image
+from rembg import remove
+
+
+def remove_br(image, widget):
+    bytes_data = Image.open(image)
+    output = remove(bytes_data)
+    widget.title("Imagem sem fundo")
+    widget.image(output)
+
+
+st.title("Carregando um arquivo")
+image = st.file_uploader("Escolha uma imagem", type=["png", "jpg", "jpeg"])
+
+# Cria duas colunas para a página
+col_a, col_b = st.columns(2)
+
+if image is not None:
+    # Coloca a imagem na primeira coluna
+    col_a.title("Imagem com fundo")
+    col_a.image(image)
+
+    st.button("Remover fundo", on_click=remove_br, args=(image, col_b))
+
+# Código fonte utilizado para criar a imagem de fundo
+with st.expander("Código fonte"):
+    st.code(
+    """
+    import streamlit as st
+    from PIL import Image
+    from rembg import remove
+
+
+    def remove_br(image, widget):
+        bytes_data = Image.open(image)
+        output = remove(bytes_data)
+        widget.title("Imagem sem fundo")
+        widget.image(output)
+
+
+    st.title("Carregando um arquivo")
+    image = st.file_uploader("Escolha uma imagem", type=["png", "jpg", "jpeg"])
+
+    # Cria duas colunas para a página
+    col_a, col_b = st.columns(2)
+
+    if image is not None:
+        # Coloca a imagem na primeira coluna
+        col_a.title("Imagem com fundo")
+        col_a.image(image)
+
+        st.button("Remover fundo", on_click=remove_br, args=(image, col_b))
+    """,
+    language="python" 
+    )
+```
+
+A seguinte saída será produzida:
+
+<img src="./media/saida_removedor_fundo.png" alt="Logo Streamlit" style="height: 100%; width:100%; flex:1"/>
+
+Agora vamos criar uma página para exibir nossos dados. Para isso, vamos criar um arquivo chamado ***Visualizacao_de_Dados.py*** dentro do diretório ***pages***. O conteúdo do arquivo é o seguinte:
+
+```python
+```
 
 ## Deploy
 
