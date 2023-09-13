@@ -1,20 +1,20 @@
-# 📊 Criando visualizações de dados com o Streamlit
+# 📊 Criando visualizações de dados com o Streamlit v1.0
 
-O objetivo deste projeto é criar uma API com FastAPI com rotas protegidas.
-Ela será uma API básica, com o objetivo de apresentar como proteger uma API com FastAPI. Ela será deployada em um container Docker, utilizando um arquivo docker-compose.
+O objetivo deste projeto é criar e deployar uma aplicação web utilizando o Streamlit para realizar a visualização dos dados. O Streamlit é uma biblioteca que permite a criação de aplicações web de forma simples e rápida, utilizando apenas Python. Para mais informações, acesse o [link](https://streamlit.io/).
+Os dados utilizados estão disponíveis nesse [link](https://www.kaggle.com/datasets/zernach/2018-airplane-flights).
 
-<img src="https://metamug.com/article/images/security/jwt-authentication-flow.svg" alt="Fluxo de autenticação de usuários" style="height: 100%; width:100%; flex:1"/>
+<img src="./media/Streamlit_Logo_1.jpg" alt="Logo Streamlit" style="height: 100%; width:100%; flex:1"/>
 
 ## Requisitos
 
 - Python >= 3.8
-- FastAPI
-- Uvicorn
-- Docker
+- Streamlit
 
 ## Recomendação de Leitura
 
-- TODO
+- [Documentação do Streamlit](https://docs.streamlit.io/)
+- [Streamlit - The fastest way to build custom ML tools](https://www.streamlit.io/)
+- [Streamlit: Criando aplicações web | Live de Python #227](https://www.youtube.com/watch?v=Ie5ef_R_k6I)
 
 ## Instalação
 
@@ -43,7 +43,7 @@ where python
 A saída esperada é a seguinte:
 
 ```bash
-C:\Users\usuario\Documents\api-autenticacao\Scripts\python.exe
+C:\Users\usuario\Documents\intro-streamlit\Scripts\python.exe
 C:\Users\usuario\AppData\Local\Programs\Python\Python38\python.exe
 ```
 
@@ -69,7 +69,68 @@ deactivate
 
 ## Desenvolvimento do Projeto
 
-- TODO
+A criação da aplicação vai seguir o conceito de desenvolvimento do Streamlit, que é construir a aplicação uma linha de cada vez. Para isso, vamos criar um arquivo ***main.py*** na raiz do projeto, com o seguinte conteúdo:
+
+```python
+import streamlit as st
+
+st.title('Hello World')
+
+st.header("Visualização de Dados com Streamlit")
+```
+
+Agora para executar nossa aplicação, vamos utilizar o comando:
+
+```bash
+python -m streamlit run main.py
+```
+
+Quando a aplicação for executada pela primeira vez, a saída esperada é a seguinte:
+
+```bash
+python -m streamlit run main.py
+
+      Welcome to Streamlit!
+
+      If you’d like to receive helpful onboarding emails, news, offers, promotions,
+      and the occasional swag, please enter your email address below. Otherwise,
+      leave this field blank.
+
+      Email:
+
+  You can find our privacy policy at https://streamlit.io/privacy-policy
+
+  Summary:
+  - This open source library collects usage statistics.
+  - We cannot see and do not store information contained inside Streamlit apps,
+    such as text, charts, images, etc.
+  - Telemetry data is stored in servers in the United States.
+  - If you'd like to opt out, add the following to %userprofile%/.streamlit/config.toml,
+    creating that file if necessary:
+
+    [browser]
+    gatherUsageStats = false
+
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.68.117:8501
+```
+
+Se alterarmos agora o nosso código-fonte enquanto a aplicação estiver em execução, ela será atualizada automaticamente. Para isso, vamos adicionar mais algumas linhas de código ao nosso arquivo ***main.py***:
+
+```python
+import streamlit as st
+
+st.title("Minha Aplicação com Streamlit")
+
+st.header("Visualização de Dados com Streamlit")
+
+st.subheader("Uma subseção")
+```
+
+
 
 ## Deploy
 
