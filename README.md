@@ -6,3 +6,4 @@ Os projetos disponíveis até o momento são:
 - [🎲 CRUD com FastAPI, SQLAlchemy e PostgreSQL](https://github.com/Murilo-ZC/Templates-Desenvolvimento/tree/main/crud-docker-compose)
 - [🔐 Protegendo uma API](https://github.com/Murilo-ZC/Templates-Desenvolvimento/tree/main/api-autenticacao)
 - [🧠 Gerando Modelos com PyCaret](https://github.com/Murilo-ZC/Templates-Desenvolvimento/tree/main/intro-pycaret)
+- [📊 Criando visualizações de dados com o Streamlit](https://github.com/Murilo-ZC/Templates-Desenvolvimento/tree/main/intro-streamlit)
