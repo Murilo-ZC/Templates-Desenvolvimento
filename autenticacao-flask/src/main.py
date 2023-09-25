@@ -24,6 +24,25 @@ if len(sys.argv) > 1 and sys.argv[1] == 'create_db':
     print("Database created successfully")
     sys.exit(0)
 
+
+
+# Método para criar um token
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity
+@app.route("/token", methods=["POST"])
+def create_token():
+    username = request.json.get("username", None)
+    password = request.json.get("password", None)
+    # Query your database for username and password
+    user = User.query.filter_by(username=username, password=password).first()
+    if user is None:
+        # the user was not found on the database
+        return jsonify({"msg": "Bad username or password"}), 401
+    
+    # create a new token with the user id inside
+    access_token = create_access_token(identity=user.id)
+    return jsonify({ "token": access_token, "user_id": user.id })
+
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
@@ -76,6 +95,7 @@ def user_register():
     return render_template("register.html")
 
 @app.route("/content", methods=["GET"])
+@jwt_required()
 def content():
     return render_template("content.html")
 

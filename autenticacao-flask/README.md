@@ -414,7 +414,47 @@ jwt = JWTManager(app)
 # Restante do código foi suprimido para facilitar a localização nos códigos
 ```
 
-Agora, vamos realizar a atualização do nosso arquivo fonte para gerar as chaves JWT de autenticação, quando um usuário solicitar. ***IMPORTANTE:*** este método vai apenas realizar a geração da chave
+Agora, vamos realizar a atualização do nosso arquivo fonte para gerar as chaves JWT de autenticação, quando um usuário solicitar. ***IMPORTANTE:*** este método vai verificar o usuário no banco de dados e então gerar a chave JWT caso o usuário e a senha do usuário estejam corretos. Para isso, vamos alterar o arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```python
+# Código anterior suprimido para facilitar a localização nos códigos
+
+# Método para criar um token
+from flask_jwt_extended import create_access_token
+@app.route("/token", methods=["POST"])
+def create_token():
+    username = request.json.get("username", None)
+    password = request.json.get("password", None)
+    # Query your database for username and password
+    user = User.query.filter_by(username=username, password=password).first()
+    if user is None:
+        # the user was not found on the database
+        return jsonify({"msg": "Bad username or password"}), 401
+    
+    # create a new token with the user id inside
+    access_token = create_access_token(identity=user.id)
+    return jsonify({ "token": access_token, "user_id": user.id })
+
+# Restante do código foi suprimido para facilitar a localização nos códigos
+```
+
+Agora, para proteger as rotas, utilizar o decorador ***jwt_required***. Para isso, vamos alterar o arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```python
+# Código anterior suprimido para facilitar a localização nos códigos
+
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+@app.route("/content", methods=["GET"])
+@jwt_required()
+def content():
+    return render_template("content.html")
+
+# Restante do código foi suprimido para facilitar a localização nos códigos
+```
+
+Assim, quando essa rota for acessada sem a chave de usuário, ela não será carregada.
+Agora vamos ajustar o comportamento da rota de login.
 
 ## Docker
 
