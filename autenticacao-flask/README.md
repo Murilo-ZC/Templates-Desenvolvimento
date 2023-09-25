@@ -15,6 +15,7 @@ O objetivo deste projeto é criar uma aplicação que é executada no servidor F
 - [Flask Quickstart](https://flask.palletsprojects.com/en/2.3.x/quickstart/#a-minimal-application)
 - [SQLAlchemy](https://www.sqlalchemy.org/)
 - [Flask SQLAlchemy](https://flask-sqlalchemy.palletsprojects.com/en/3.1.x/)
+- [Data Management With Python, SQLite, and SQLAlchemy](https://realpython.com/python-sqlite-sqlalchemy/#working-with-sqlalchemy-and-python-objects)
 
 
 
@@ -119,13 +120,20 @@ from database.database import db
 class User(db.Model):
   __tablename__ = 'users'
 
-  id = Column(Integer, primary_key=True)
+  id = Column(Integer, primary_key=True, autoincrement=True)
   name = Column(String(50), nullable=False)
   email = Column(String(50), nullable=False)
   password = Column(String(50), nullable=False)
 
   def __repr__(self):
     return f'<User:[id:{self.id}, name:{self.name}, email:{self.email}, password:{self.password}]>'
+  
+  def serialize(self):
+    return {
+      "id": self.id,
+      "name": self.name,
+      "email": self.email,
+      "password": self.password}
 ```
 
 Agora, vamos ligar nosso modelo com a aplicação Flask. Para isso, vamos alterar o arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
@@ -133,6 +141,8 @@ Agora, vamos ligar nosso modelo com a aplicação Flask. Para isso, vamos altera
 ```python
 from flask import Flask
 from database.database import db
+from flask import jsonify, request
+from database.models import User
 
 app = Flask(__name__)
 # configure the SQLite database, relative to the app instance folder
@@ -161,11 +171,15 @@ Agora, vamos criar o banco de dados. Para isso, vamos executar o comando abaixo:
 python src/main.py create_db
 ```
 
+> ***IMPORTANTE:*** Para que a criação das tabelas possa ser executada com sucesso, é necessário importar todas as classes que implementam a classe base no programa. Caso contrário, as demais tabelas não serão criadas.
+
 A execução do programa vai criar as tabelas no banco de dados. O arquivo do banco de dados será criado em ***var/main-instance/project.db***. Agora, vamos criar as rotas para o CRUD de usuários. Para isso, vamos alterar o arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
 
 ```python
 from flask import Flask
 from database.database import db
+from flask import jsonify, request
+from database.models import User
 
 app = Flask(__name__)
 # configure the SQLite database, relative to the app instance folder
@@ -188,26 +202,26 @@ def hello_world():
     return "<p>Hello, World!</p>"
 
 # Adicionando as rotas CRUD para a entidade User
-from flask import jsonify, request
-from database.models import User
-
 @app.route("/users", methods=["GET"])
 def get_users():
     users = User.query.all()
-    return jsonify(users)
+    return_users = []
+    for user in users:
+        return_users.append(user.serialize())
+    return jsonify(return_users)
 
 @app.route("/users/<int:id>", methods=["GET"])
 def get_user(id):
     user = User.query.get(id)
-    return jsonify(user)
+    return jsonify(user.serialize())
 
 @app.route("/users", methods=["POST"])
 def create_user():
     data = request.json
-    user = User(**data)
+    user = User(name=data["name"], email=data["email"], password=data["password"])
     db.session.add(user)
     db.session.commit()
-    return jsonify(user)
+    return jsonify(user.serialize())
 
 @app.route("/users/<int:id>", methods=["PUT"])
 def update_user(id):
@@ -217,14 +231,14 @@ def update_user(id):
     user.email = data["email"]
     user.password = data["password"]
     db.session.commit()
-    return jsonify(user)
+    return jsonify(user.serialize())
 
 @app.route("/users/<int:id>", methods=["DELETE"])
 def delete_user(id):
     user = User.query.get(id)
     db.session.delete(user)
     db.session.commit()
-    return jsonify(user)
+    return jsonify(user.serialize())
 ```
 
 Agora, vamos avaliar as rotas:
@@ -238,13 +252,169 @@ Agora, vamos avaliar as rotas:
 Agora, vamos testar as rotas. Para isso, vamos executar o comando abaixo, dentro do diretório ***"src"***:
 
 ```bash
-python -m flask --app src.main run
+python -m flask --app main run
 ```
 
-E testamos as rotas com o Thunber Client. Para isso, vamos acessar a URL ***http://localhost:5000/users***. A saída esperada é a seguinte:
+E testamos as rotas com o Thunber Client. Para isso, vamos acessar a URL ***http://localhost:5000/users***. Cada vez que o método **POST** for utilizado, um novo registro será criado no banco de dados. Para testar o método **POST**, vamos utilizar o Thunber Client. Para isso, vamos acessar a URL ***http://localhost:5000/users***, e vamos inserir o seguinte JSON:
 
+```json
+{
+  "name": "Teste",
+  "email": "mail@mail.com",
+    "password": "123456"
+}
+```
 
+Agora vamos adicionar nossa página de login, onde o usuário vai informar o email e a senha. Para isso, vamos criar o arquivo ***"login.html"***, dentro do diretório ***"templates"***. Dentro deste arquivo, vamos inserir o código abaixo:
 
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Auth</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form action="http://localhost:5000/login" method="POST">
+        <label for="username">Username</label>
+        <input type="text" name="username" id="username" required>
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required>
+        <input type="submit" value="Login">
+    </form>
+    <p>Don't have an account? <a href="http://localhost:5000/user-register">Register</a></p>    
+</body>
+</html>
+```
+
+E vamos alterar o arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```python
+from flask import Flask
+from database.database import db
+from flask import jsonify, request, render_template
+from database.models import User
+
+app = Flask(__name__, template_folder="templates")
+# configure the SQLite database, relative to the app instance folder
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
+# initialize the app with the extension
+db.init_app(app)
+
+# Código anterior suprimido para facilitar a localização nos códigos
+
+@app.route("/user-login", methods=["GET"])
+def user_login():
+    return render_template("login.html")
+```
+
+Agora nossa página de login está pronta. Vamos criar a página de registro. Para isso, vamos criar o arquivo ***"register.html"***, dentro do diretório ***"templates"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register User</title>
+</head>
+<body>
+    <h1>Register User</h1>
+    <form action="http://localhost:5000/register" method="POST">
+        <label for="username">Username</label>
+        <input type="text" name="username" id="username" required>
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required>
+        <input type="submit" value="Register">
+    </form>
+    <p>Already have an account? <a href="http://localhost:5000/user-login">Login</a></p>
+</body>
+</html>
+```
+
+Agora, ajustamos o arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```python
+# Código superior suprimido para facilitar a localização nos códigos
+@app.route("/user-register", methods=["GET"])
+def user_register():
+    return render_template("register.html")
+```
+
+E por fim, vamos criar nossa página que será protegida por autenticação e a página que indica que uma falha aconteceu. Para a página de conteúdo protegido, vamos criar o arquivo ***"content.html"***, dentro do diretório ***"templates"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conteúdo Secreto</title>
+</head>
+<body>
+    <h1>Conteúdo Secreto</h1>
+    <img src="https://picsum.photos/300" width="300" height="300"/>
+    <button onClick="window.location.reload();">Refresh Page</button>
+</body>
+</html>
+```
+
+E para a página de erro, vamos criar o arquivo ***"error.html"***, dentro do diretório ***"templates"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Something went wrong</title>
+</head>
+<body>
+    <h1>Algo deu errado</h1>
+    <img src="http://placekitten.com/300/300" width="300" height="300"/>
+    <p>Vamos novamente? <a href="http://localhost:5000/user-login">Home</a></p>
+</body>
+</html>
+```
+
+E em nosso código no arquivo ***"main.py"***, dentro do diretório ***"src"***, vamos inserir o código abaixo:
+
+```python
+# Código anterior suprimido
+@app.route("/content", methods=["GET"])
+def content():
+    return render_template("content.html")
+
+@app.route("/error", methods=["GET"])
+def error():
+    return render_template("error.html")
+```
+
+Agora para lidar com a autenticação dos usuários, vamos utilizar a biblioteca ***JWTManager*** do ***flask_jwt_extended***. Para isso, vamos adicionar a biblioteca no arquivo ***"requirements.txt"***. Agora, vamos atualizar nosso arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
+
+```python
+from flask import Flask
+from database.database import db
+from flask import jsonify, request, render_template
+from database.models import User
+
+from flask_jwt_extended import JWTManager
+
+app = Flask(__name__, template_folder="templates")
+# configure the SQLite database, relative to the app instance folder
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
+# initialize the app with the extension
+db.init_app(app)
+# Setup the Flask-JWT-Extended extension
+app.config["JWT_SECRET_KEY"] = "goku-vs-vegeta" 
+jwt = JWTManager(app)
+
+# Restante do código foi suprimido para facilitar a localização nos códigos
+```
+
+Agora, vamos realizar a atualização do nosso arquivo fonte para gerar as chaves JWT de autenticação, quando um usuário solicitar. ***IMPORTANTE:*** este método vai apenas realizar a geração da chave
 
 ## Docker
 
