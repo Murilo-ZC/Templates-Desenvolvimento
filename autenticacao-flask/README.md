@@ -456,6 +456,33 @@ def content():
 Assim, quando essa rota for acessada sem a chave de usuário, ela não será carregada.
 Agora vamos ajustar o comportamento da rota de login.
 
+```python	
+import requests as http_request
+
+# Código anterior suprimido para facilitar a localização nos códigos
+
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.form.get("username", None)
+    password = request.form.get("password", None)
+    # Verifica os dados enviados não estão nulos
+    if username is None or password is None:
+        # the user was not found on the database
+        return render_template("error.html", message="Bad username or password")
+    # faz uma chamada para a criação do token
+    token_data = http_request.post("http://localhost:5000/token", json={"username": username, "password": password})
+    if token_data.status_code != 200:
+        return render_template("error.html", message="Bad username or password")
+    # recupera o token
+    response = make_response(render_template("content.html"))
+    response.headers.set("token", token_data.json())
+    return response
+
+# Restante do código foi suprimido para facilitar a localização nos códigos
+```
+
+
+
 ## Docker
 
 - TODO

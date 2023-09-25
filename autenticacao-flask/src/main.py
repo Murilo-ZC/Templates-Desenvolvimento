@@ -1,3 +1,5 @@
+import requests as http_request
+from flask import make_response
 from flask import Flask
 from database.database import db
 from flask import jsonify, request, render_template
@@ -34,7 +36,7 @@ def create_token():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
     # Query your database for username and password
-    user = User.query.filter_by(username=username, password=password).first()
+    user = User.query.filter_by(email=username, password=password).first()
     if user is None:
         # the user was not found on the database
         return jsonify({"msg": "Bad username or password"}), 401
@@ -89,6 +91,25 @@ def delete_user(id):
 @app.route("/user-login", methods=["GET"])
 def user_login():
     return render_template("login.html")
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.form.get("username", None)
+    password = request.form.get("password", None)
+    # Verifica os dados enviados não estão nulos
+    if username is None or password is None:
+        # the user was not found on the database
+        return render_template("error.html", message="Bad username or password")
+    # faz uma chamada para a criação do token
+    token_data = http_request.post("http://localhost:5000/token", json={"username": username, "password": password})
+    if token_data.status_code != 200:
+        return render_template("error.html", message="Bad username or password")
+    # recupera o token
+    response = make_response(render_template("content.html"))
+    response.headers.set("token", token_data.json())
+    return response
+
 
 @app.route("/user-register", methods=["GET"])
 def user_register():
