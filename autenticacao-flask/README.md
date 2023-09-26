@@ -395,12 +395,9 @@ def error():
 Agora para lidar com a autenticação dos usuários, vamos utilizar a biblioteca ***JWTManager*** do ***flask_jwt_extended***. Para isso, vamos adicionar a biblioteca no arquivo ***"requirements.txt"***. Agora, vamos atualizar nosso arquivo ***"main.py"***, dentro do diretório ***"src"***. Dentro deste arquivo, vamos inserir o código abaixo:
 
 ```python
-from flask import Flask
-from database.database import db
-from flask import jsonify, request, render_template
-from database.models import User
+# Código anterior suprimido para facilitar a localização nos códigos
 
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, set_access_cookies
 
 app = Flask(__name__, template_folder="templates")
 # configure the SQLite database, relative to the app instance folder
@@ -409,6 +406,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
 db.init_app(app)
 # Setup the Flask-JWT-Extended extension
 app.config["JWT_SECRET_KEY"] = "goku-vs-vegeta" 
+# Seta o local onde o token será armazenado
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 jwt = JWTManager(app)
 
 # Restante do código foi suprimido para facilitar a localização nos códigos
@@ -421,12 +420,13 @@ Agora, vamos realizar a atualização do nosso arquivo fonte para gerar as chave
 
 # Método para criar um token
 from flask_jwt_extended import create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity
 @app.route("/token", methods=["POST"])
 def create_token():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
     # Query your database for username and password
-    user = User.query.filter_by(username=username, password=password).first()
+    user = User.query.filter_by(email=username, password=password).first()
     if user is None:
         # the user was not found on the database
         return jsonify({"msg": "Bad username or password"}), 401
@@ -475,7 +475,7 @@ def login():
         return render_template("error.html", message="Bad username or password")
     # recupera o token
     response = make_response(render_template("content.html"))
-    response.headers.set("token", token_data.json())
+    set_access_cookies(response, token_data.json()['token'])
     return response
 
 # Restante do código foi suprimido para facilitar a localização nos códigos

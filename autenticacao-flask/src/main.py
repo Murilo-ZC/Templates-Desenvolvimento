@@ -5,7 +5,7 @@ from database.database import db
 from flask import jsonify, request, render_template
 from database.models import User
 
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, set_access_cookies
 
 app = Flask(__name__, template_folder="templates")
 # configure the SQLite database, relative to the app instance folder
@@ -14,6 +14,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
 db.init_app(app)
 # Setup the Flask-JWT-Extended extension
 app.config["JWT_SECRET_KEY"] = "goku-vs-vegeta" 
+# Seta o local onde o token será armazenado
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 jwt = JWTManager(app)
 
 # Verifica se o parâmetro create_db foi passado na linha de comando
@@ -107,7 +109,8 @@ def login():
         return render_template("error.html", message="Bad username or password")
     # recupera o token
     response = make_response(render_template("content.html"))
-    response.headers.set("token", token_data.json())
+    set_access_cookies(response, token_data.json()['token'])
+    # response.set_cookie("token", token_data.json()['token'])
     return response
 
 

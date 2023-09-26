@@ -5,9 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conteúdo Secreto</title>
 </head>
-<body>
+<body onload="save_and_load_token()">
     <h1>Conteúdo Secreto</h1>
     <img src="https://picsum.photos/300" width="300" height="300"/>
-    <button onClick="window.location.reload();">Refresh Page</button>
+    <p>Another? <a href="http://localhost:5000/content">Get Here</a></p>
+    <script>
+        async function save_and_load_token(){
+            //Pega os cookies da página
+            let myCookie = await browser.cookies.get("token");
+            console.log(myCookie)
+            if (myCookie){
+                localStorage.setItem("jwt-token", myCookie)
+            }
+            else if(!localStorage.getItem("jwt-token")){
+                window.location.href = "http://localhost:5000/error"
+            }
+            else{
+                myCookie = localStorage.getItem("jwt-token")
+                browser.cookies.set({
+                    url: "http://localhost:5000",
+                    name: "token",
+                    value: myCookie
+                })
+            }
+        }
+    </script>
 </body>
 </html>
